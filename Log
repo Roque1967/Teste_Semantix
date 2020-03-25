@@ -1,0 +1,102 @@
+Instruções:
+1) Baixar os arquivos das seguintes URLs:
+	Jul 01 to Jul 31, ASCII format, 20.7 MB gzip
+	Aug 04 to Aug 31, ASCII format, 21.8 MB gzip
+
+2) Criar diretório no HFDS
+hdfs dfs -mkdir -p /user/HOME/teste/
+
+3) Copiar os arquivos baixados para o diretório HFS criado no passo 2
+	hdfs dfs -put NASA_access_log_Jul95.gz /user/80623286/teste/ 
+	hdfs dfs -put NASA_access_log_Aug95.gz /user/80623286/teste/
+
+4) Gerar tabela externa, utilizando o diretório HDFS do passo 3, conforme segue:
+drop table owner.HOME_teste;
+create external table onwer.HOME_teste ( 
+coluna_1 string,
+coluna_2 string,
+coluna_3 string,
+coluna_4 string,
+coluna_5 string,
+coluna_6 string,
+coluna_7 string,
+coluna_8 string,
+coluna_9 string,
+coluna_10 string
+) ROW FORMAT DELIMITED FIELDS TERMINATED BY ' ' STORED AS textfile LOCATION '/user/HOME/teste';
+
+4) Gerar tabela HIVE com as coluna que serão utilizadas na solução, conforme segue:
+
+create table owner.HOME_base as
+select coluna_1 as host,
+concat(coluna_4, coluna_5) as dt_requisicao,
+concat(coluna_6, coluna_7, coluna_8) as desc_requisicao,
+coluna_9 as retorno_HTTP,
+cast(coluna_10 as BIGINT) as tot_bytes_ret
+from owner.HOME_teste;
+
+5) Entrar no ambiente Spark
+
+6) Executar o script Python (Spark) abaixo, para obter no log de execução as repostas do desafio:
+#!/usr/bin/python
+# coding: utf-8
+# IMPORTs
+from pyspark import SparkContext, StorageLevel # SparkConf
+from pyspark.sql import HiveContext, SparkSession
+from datetime import datetime, timedelta
+from pyspark.sql import functions as F
+
+# from pyspark.sql import functions as sqlfunc
+# from pyspark import StorageLevel
+
+#class IptvSession:
+    # Obtendo o Spark contexto e a sessão do spark.
+print("Obtendo contexto Spark...")
+sc = SparkContext(appName=None)
+    # Set log level
+sc.setLogLevel('ERROR')
+sparkSession = SparkSession.builder.appName("Teste").enableHiveSupport().getOrCreate()
+
+def lerBase5():
+	sparkSession.sql("select sum(tot_bytes_ret) tot_bytes_ret from owner.HOME_base").persist(StorageLevel(True, True, False, False, 2)).createOrReplaceTempView("base5")
+
+def lerBase4():
+	sparkSession.sql("select substr(dt_requisicao,2,11) data, count(*) qtde_erros from owner.HOME_base where retorno_HTTP = 404 group by substr(dt_requisicao,2,11)").persist(StorageLevel(True, True, False, False, 2)).createOrReplaceTempView("base4")
+	lerBase5()	
+
+def lerBase3():
+	sparkSession.sql("select x.desc_requisicao, x.qtde_erros from (select desc_requisicao, count(*) qtde_erros from owner.HOME_base group by desc_requisicao )x SORT BY x.qtde_erros DESC LIMIT 5").persist(StorageLevel(True, True, False, False, 2)).createOrReplaceTempView("base3")
+	lerBase4()
+
+def lerBase2():
+	sparkSession.sql("select 'Qtde de erros 404 = ', count(*) from owner.HOME_base where retorno_HTTP = 404").persist(StorageLevel(True, True, False, False, 2)).createOrReplaceTempView("base2")
+	lerBase3()
+	
+def lerBase1():
+    sparkSession.sql("select 'Hosts distintos = ', count(distinct host)  from owner.HOME_base").persist(StorageLevel(True, True, False, False, 2)).createOrReplaceTempView("base1")
+    lerBase2()	
+
+# 1. Número de hosts únicos.
+sqlDF = spark.sql("SELECT * FROM base1")
+sqlDF.show()
+
+#2. O total de erros 404.
+sqlDF = spark.sql("SELECT * FROM base2")
+sqlDF.show()
+
+#3. Os 5 URLs que mais causaram erro 404.
+sqlDF = spark.sql("SELECT * FROM base3")
+sqlDF.show()
+
+#4. Quantidade de erros 404 por dia.
+sqlDF = spark.sql("SELECT * FROM base4")
+sqlDF.show()
+
+#5. O total de bytes retornados.
+sqlDF = spark.sql("SELECT * FROM base5")
+sqlDF.show()
+
+if __name__ == "__main__":
+    lerBase1()
+
+

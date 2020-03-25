@@ -1,0 +1,72 @@
+>>> # 1. Número de hosts únicos.
+... sqlDF = spark.sql("SELECT * FROM base1")
+>>> sqlDF.show()
++------------------+--------------------+
+|Hosts distintos = |count(DISTINCT host)|
++------------------+--------------------+
+|Hosts distintos = |              137979|
++------------------+--------------------+
+
+>>>
+>>> #2. O total de erros 404.
+... sqlDF = spark.sql("SELECT * FROM base2")
+>>> sqlDF.show()
++--------------------+--------+
+|Qtde de erros 404 = |count(1)|
++--------------------+--------+
+|Qtde de erros 404 = |   20686|
++--------------------+--------+
+
+>>>
+>>> #3. Os 5 URLs que mais causaram erro 404.
+... sqlDF = spark.sql("SELECT * FROM base3")
+>>> sqlDF.show()
++--------------------+----------+
+|     desc_requisicao|qtde_erros|
++--------------------+----------+
+|"GET/facilities/l...|      9715|
+|"GET/images/launc...|      3983|
+|"GET/history/skyl...|       416|
+|"GET/facts/faq01....|       407|
+|"GET/facts/faq05....|       113|
++--------------------+----------+
+
+>>>
+>>> #4. Quantidade de erros 404 por dia.
+... sqlDF = spark.sql("SELECT * FROM base4")
+>>> sqlDF.show()
++-----------+----------+
+|       data|qtde_erros|
++-----------+----------+
+|02/Jul/1995|       289|
+|21/Aug/1995|       305|
+|06/Aug/1995|       370|
+|16/Jul/1995|       256|
+|07/Aug/1995|       527|
+|11/Aug/1995|       260|
+|27/Jul/1995|       334|
+|07/Jul/1995|       564|
+|17/Jul/1995|       403|
+|15/Jul/1995|       252|
+|18/Jul/1995|       463|
+|26/Jul/1995|       319|
+|03/Aug/1995|       301|
+|18/Aug/1995|       248|
+|17/Aug/1995|       269|
+|14/Aug/1995|       286|
+|10/Jul/1995|       390|
+|04/Jul/1995|       355|
+|20/Aug/1995|       312|
+|20/Jul/1995|       427|
++-----------+----------+
+only showing top 20 rows
+
+>>>
+>>> #5. O total de bytes retornados.
+... sqlDF = spark.sql("SELECT * FROM base5")
+>>> sqlDF.show()
++-------------+
+|tot_bytes_ret|
++-------------+
+|  65143741103|
++-------------+
